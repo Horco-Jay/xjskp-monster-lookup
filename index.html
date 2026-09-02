@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101418">
+  <title>怪物属性速查</title>
+  <style>
+    :root { --bg:#101418; --panel:#182028; --line:#303b46; --text:#f3f6f8; --muted:#9ba8b5; --good:#62d6ad; --bad:#ff766b; --fire:#ff8a4c; --ice:#75c8ff; --electric:#f5cd48; --wind:#6fdcc8; --physical:#cbd2d8; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+    button, input { font:inherit; }
+    button { cursor:pointer; }
+    .app { width:min(100%, 520px); margin:0 auto; min-height:100vh; padding:20px 16px calc(40px + env(safe-area-inset-bottom)); background:radial-gradient(circle at 50% -10%, #24313c 0, var(--bg) 42%); }
+    h1 { margin:8px 0 20px; font-size:32px; letter-spacing:.04em; text-align:center; }
+    .search { display:flex; align-items:center; gap:10px; padding:0 16px; height:54px; border:1px solid var(--line); border-radius:16px; background:#151c23; }
+    .search svg { width:24px; height:24px; color:var(--muted); flex:0 0 auto; }
+    .search input { min-width:0; width:100%; border:0; outline:0; background:transparent; color:var(--text); font-size:17px; }
+    .search input::placeholder { color:#8c98a3; }
+    .filters { display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; margin:14px 0 18px; }
+    .filter { min-height:38px; padding:5px 2px; border:1px solid #394550; border-radius:10px; background:#151c23; color:var(--text); font-weight:700; font-size:13px; }
+    .filter[aria-pressed="true"] { background:#27323c; border-color:#dce4e8; }
+    .filter.fire { color:var(--fire); }.filter.ice { color:var(--ice); }.filter.electric { color:var(--electric); }.filter.wind { color:var(--wind); }.filter.physical { color:var(--physical); }
+    .filter[data-filter="all"] { color:var(--text); }
+    .section { margin:22px 2px 9px; color:#dbe3e8; font-size:15px; font-weight:800; letter-spacing:.12em; }
+    .cards { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+    .card { overflow:hidden; border:1px solid #41505b; border-radius:10px; background:#171e25; box-shadow:0 7px 18px rgba(0,0,0,.18); }
+    .card-main { display:block; padding:4px 4px 6px; text-align:center; width:100%; border:0; background:transparent; color:inherit; }
+    .thumb { display:block; width:100%; height:86px; border-radius:7px; background:#303b42 url("assets/boss-gallery.webp") no-repeat; background-size:300% 300%; border:1px solid #4c5863; }
+    .thumb.boss-0,.sheet-art.boss-0{background-position:0 0}.thumb.boss-1,.sheet-art.boss-1{background-position:50% 0}.thumb.boss-2,.sheet-art.boss-2{background-position:100% 0}.thumb.boss-3,.sheet-art.boss-3{background-position:0 50%}.thumb.boss-4,.sheet-art.boss-4{background-position:50% 50%}.thumb.boss-5,.sheet-art.boss-5{background-position:100% 50%}.thumb.boss-6,.sheet-art.boss-6{background-position:0 100%}.thumb.boss-7,.sheet-art.boss-7{background-position:50% 100%}.thumb.boss-8,.sheet-art.boss-8{background-position:100% 100%}
+    .thumb.source,.sheet-art.source { background:none; object-fit:cover; object-position:center; }
+    .thumb.normal,.sheet-art.normal { background-image:none; display:grid; place-items:center; color:#d9e1e6; font-size:18px; font-weight:900; letter-spacing:.08em; }
+    .card-copy { min-width:0; display:block; }
+    .name-row { display:block; }
+    .name { display:block; min-height:32px; padding:5px 1px 4px; overflow:hidden; font-size:13px; font-weight:800; line-height:1.2; text-align:center; }
+    .arrow { display:none; }
+    .choice { display:block; min-height:4px; height:4px; padding:0; overflow:hidden; border-radius:4px; font-size:0; }
+    .choice.good { background:var(--good); border:0; }
+    .choice.bad { display:none; }
+    .choice .icon { display:none; }
+    .detail { display:none; }
+    .empty { display:none; padding:28px 8px; text-align:center; color:var(--muted); }
+    .tip { margin-top:22px; padding:17px; border:1px solid #3d4a55; border-radius:18px; background:#182129; }
+    .tip h2 { margin:0 0 10px; font-size:19px; }.tip ul { margin:0; padding-left:18px; color:#d6dee4; line-height:1.75; }.tip b{color:var(--good)} .tip em{font-style:normal;color:var(--bad)}
+    .detail-sheet { position:fixed; z-index:5; left:50%; bottom:max(10px, env(safe-area-inset-bottom)); width:min(calc(100% - 24px), 496px); transform:translateX(-50%); padding:14px; border:1px solid #465461; border-radius:18px; background:#151d24; box-shadow:0 14px 42px rgba(0,0,0,.55); }
+    .detail-sheet[hidden] { display:none; }
+    .sheet-close { position:absolute; top:10px; right:10px; width:30px; height:30px; border:0; border-radius:50%; background:#27323c; color:#dbe3e8; font-size:21px; line-height:1; }
+    .sheet-grid { display:grid; grid-template-columns:82px 1fr; gap:12px; align-items:center; }
+    .sheet-art { width:82px; height:92px; border:1px solid #4c5863; border-radius:10px; object-fit:cover; background:#303b42 url("assets/boss-gallery.webp") no-repeat; background-size:300% 300%; }
+    .sheet-name { margin:0 34px 7px 0; font-size:20px; }.sheet-detail { margin:0 0 8px; color:#afbcc6; font-size:13px; line-height:1.4; }.sheet-choice { margin:4px 0; font-size:14px; font-weight:800; }.sheet-choice.good { color:var(--good); }.sheet-choice.bad { color:var(--bad); }
+    .footer { margin:22px 0 0; color:#7e8b97; text-align:center; font-size:12px; line-height:1.55; }
+    @media (max-width:360px) { .app { padding-inline:12px; }.thumb { height:80px; }.name { font-size:12px; }.filters { gap:4px; }.filter { font-size:12px; } }
+    @media (prefers-reduced-motion:reduce) { .arrow { transition:none; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>怪物属性速查</h1>
+    <label class="search" aria-label="搜索 BOSS 或怪物">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="search" type="search" autocomplete="off" placeholder="搜索 BOSS 或怪物">
+    </label>
+    <nav class="filters" aria-label="按优先属性筛选">
+      <button class="filter" data-filter="all" aria-pressed="true">全部</button>
+      <button class="filter fire" data-filter="火" aria-pressed="false">🔥 火</button>
+      <button class="filter ice" data-filter="冰" aria-pressed="false">❄️ 冰</button>
+      <button class="filter electric" data-filter="电" aria-pressed="false">⚡ 电</button>
+      <button class="filter wind" data-filter="风" aria-pressed="false">〰️ 风</button>
+      <button class="filter physical" data-filter="物理" aria-pressed="false">⬡ 物理</button>
+    </nav>
+    <div id="results"></div>
+    <section id="detail-sheet" class="detail-sheet" hidden aria-live="polite"></section>
+    <p id="empty" class="empty">没有找到匹配的怪物。换个名字或属性试试。</p>
+    <section class="tip" aria-label="30 秒口诀">
+      <h2>⏱ 30 秒口诀</h2>
+      <ul>
+        <li><b>钻头</b>用风；<em>别用物理</em>。</li>
+        <li><b>元素破解者</b>用物理；<em>元素伤害无效</em>。</li>
+        <li><b>火爹</b>避火冰；<b>乌龟</b>用火；<b>蜜蜂</b>用风。</li>
+        <li><b>深海巨兽</b>用电，但<em>别冻它</em>。</li>
+      </ul>
+    </section>
+    <p class="footer">点击卡片可展开机制说明。游戏内图鉴与本页不一致时，以游戏当前描述为准。</p>
+  </main>
+  <script>
+    const monsters = [
+      {group:'首领 BOSS',name:'暴食者',good:'能量',bad:'风系（减伤 70%）',detail:'免击退；负面状态时间减半。优先制导激光、高能射线。',thumb:0,tags:['能量']},
+      {group:'首领 BOSS',name:'深渊巨兽',aliases:'深海巨兽 章鱼',good:'电系',bad:'冰冻、燃烧',detail:'冰冻会回血，燃烧无效，难以击退。优先电磁穿刺。',thumb:1,tags:['电']},
+      {group:'首领 BOSS',name:'看守者',good:'冰系',bad:'主要依赖弹道伤害',detail:'冰伤 +50%；弹道伤害 -90%；免麻痹、晕眩。',thumb:2,tags:['冰']},
+      {group:'首领 BOSS',name:'巨魔僵尸',good:'火系',bad:'麻痹、晕眩控制',detail:'火伤 +50%；受伤后会回血；几乎无法击退。',thumb:3,tags:['火']},
+      {group:'首领 BOSS',name:'机械开垦者',aliases:'钻头',good:'风系',bad:'物理、燃烧、麻痹、晕眩、击退',detail:'风伤 +100%；免物理与上述控制。旋风加农优先。',thumb:4,tags:['风']},
+      {group:'首领 BOSS',name:'元素破解者',good:'物理',bad:'所有元素伤害与元素控制',detail:'物理伤 +50%。优先枪械流、装甲车、无人机。',thumb:5,tags:['物理']},
+      {group:'首领 BOSS',name:'烈焰掌控者',aliases:'火爹',good:'物理、能量、枪械流',bad:'火系、冰系、燃烧',detail:'难击退，贴墙伤害很高。不要拿火或冰当主输出。',thumb:6,tags:['物理']},
+      {group:'首领 BOSS',name:'风暴先锋',good:'物理、火系、冰系控制',bad:'电系、能量',detail:'免闪电与能量，难击退。',thumb:7,tags:['物理','火','冰']},
+      {group:'首领 BOSS',name:'混沌制造者',good:'枪械流、温压弹、燃油弹',bad:'控制或击退思路',detail:'免所有控制与击退；受击会召唤傀儡，重视清召唤物。',thumb:8,tags:[]},
+      {group:'首领 BOSS',name:'尸球来袭',good:'高爆发物理、温压弹、燃油弹',bad:'无明确元素弱点',detail:'肉球型，高威胁城墙伤害。公开资料未列明确元素弱点。',image:'corpse-ball.png',tags:['物理']},
+      {group:'常见怪物',name:'寒霜兽',aliases:'乌龟',good:'火系',bad:'冰冻、燃烧、麻痹控制',detail:'火伤 +200%；挡弹道，难击退。',image:'frost-beast.png',tags:['火']},
+      {group:'常见怪物',name:'寒霜兽精英',aliases:'大乌龟',good:'火系',bad:'冰冻、燃烧、冻伤控制',detail:'火伤 +200%；挡弹道，难击退。',image:'frost-beast.png',tags:['火']},
+      {group:'常见怪物',name:'异化毒蜂',aliases:'蜜蜂',good:'风系',bad:'地面技能；能量伤害减半',detail:'风伤 +50%；飞行、远程攻击。',image:'mutated-poison-bee.png',tags:['风']},
+      {group:'常见怪物',name:'闪电蜥蜴',good:'冰系',bad:'电系伤害减半',detail:'冰伤 +50%；多段攻击，免击退。',image:'lightning-lizard.png',tags:['冰']},
+      {group:'常见怪物',name:'迅捷鬣狗',good:'冰系',bad:'—',detail:'冰伤 +50%。',image:'swift-hyena.png',tags:['冰']},
+      {group:'常见怪物',name:'双头僵尸',good:'火系或电系',bad:'—',detail:'火伤 +50%；电伤 +50%。',image:'double-headed-zombie.png',tags:['火','电']},
+      {group:'常见怪物',name:'沉重僵尸',good:'火系',bad:'—',detail:'火伤 +50%；燃烧时间翻倍。',image:'heavy-zombie.png',tags:['火']},
+      {group:'常见怪物',name:'绷带僵尸',good:'火系',bad:'—',detail:'火伤 +100%；燃烧时间翻倍。',image:'wrapped-zombie.png',tags:['火']},
+      {group:'常见怪物',name:'炸弹僵尸',good:'火系',bad:'—',detail:'火伤 +50%。',image:'bomb-zombie.png',tags:['火']},
+      {group:'常见怪物',name:'火焰僵尸',good:'冰系',bad:'—',detail:'冰伤 +100%。',image:'fire-zombie.png',tags:['冰']},
+      {group:'常见怪物',name:'冰雪僵尸',good:'火系',bad:'—',detail:'火伤 +50%；燃烧时间翻倍。',image:'snow-zombie.png',tags:['火']},
+      {group:'常见怪物',name:'雷电僵尸',good:'火系',bad:'—',detail:'火伤 +50%。',image:'thunder-zombie.png',tags:['火']},
+      {group:'常见怪物',name:'网球僵尸',good:'电系',bad:'—',detail:'电伤 +50%；远程怪，优先处理。',image:'tennis-zombie.png',tags:['电']},
+      {group:'常见怪物',name:'篮球僵尸',good:'火系或电系',bad:'—',detail:'火伤 +50%；电伤 +50%；远程怪，优先处理。',image:'basketball-zombie.png',tags:['火','电']},
+      {group:'常见怪物',name:'持盾僵尸',good:'电系',bad:'弹道、燃烧、晕眩、击退效果受限',detail:'电伤 +50%；会挡弹道。',image:'shield-zombie.png',tags:['电']},
+      {group:'特殊精英',name:'巨人僵尸',good:'远距离燃烧/百分比伤害',bad:'控制思路',detail:'免控；靠近防线可远程攻击。',image:'giant-zombie.png',tags:['火']},
+      {group:'特殊精英',name:'咸鱼僵尸',good:'高频伤害、特殊子弹、旋风牵引',bad:'只靠燃烧清场',detail:'死亡后给同伴护甲与免控（含免燃烧）。',image:'salty-zombie.png',tags:['风']},
+      {group:'特殊精英',name:'野猪僵尸',good:'燃烧百分比伤害 + 控场',bad:'击退',detail:'免击退，攻击高。',image:'boar-zombie.png',tags:['火']},
+      {group:'特殊精英',name:'飞行员僵尸',aliases:'飞机僵尸',good:'跃迁电子、旋风加农',bad:'普通弹道硬打',detail:'50% 弹道闪避，开局爆发加速。',image:'pilot-zombie.png',tags:['风']},
+      {group:'特殊精英',name:'护士僵尸',good:'先集火；燃烧 + 冰/击退控制',bad:'麻痹',detail:'高额群体回血；免麻痹。',image:'nurse-zombie.png',tags:['火','冰']},
+      {group:'特殊精英',name:'墓碑僵尸',good:'燃烧百分比伤害、旋风',bad:'击退',detail:'挡弹道、免击退；死亡后仍留墓碑挡弹道。',tags:['火','风']}
+      ,{group:'已遇待核',name:'普通僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'normal-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'食腐鸟',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'scavenger-bird.png',tags:[]}
+      ,{group:'已遇待核',name:'天线僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'antenna-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'护甲僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'armored-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'傀儡僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'puppet-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'傀儡制造者',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'puppet-maker.png',tags:[]}
+      ,{group:'已遇待核',name:'异化魔蟹',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'mutated-crab.png',tags:[]}
+      ,{group:'已遇待核',name:'蛮力僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'brute-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'矿工僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'miner-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'渔夫僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'fisherman-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'木乃伊僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'mummy-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'盗墓贼僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'tomb-raider-zombie.png',tags:[]}
+      ,{group:'已遇待核',name:'气球僵尸',good:'待核对',bad:'—',detail:'已从你的研究所图鉴确认外形；截图未含属性详情。',image:'balloon-zombie.png',tags:[]}
+    ];
+    const results = document.querySelector('#results');
+    const empty = document.querySelector('#empty');
+    const search = document.querySelector('#search');
+    const sheet = document.querySelector('#detail-sheet');
+    let filter = 'all';
+    function iconFor(value) { return value.includes('火') ? '🔥' : value.includes('冰') ? '❄️' : value.includes('电') ? '⚡' : value.includes('风') ? '〰️' : value.includes('物理') ? '⬡' : '✦'; }
+    function artFor(m, className) {
+      if (m.image) return `<img class="${className} source" src="assets/monsters/${m.image}" alt="${m.name}">`;
+      if (Number.isInteger(m.thumb)) return `<div class="${className} boss-${m.thumb}" aria-hidden="true"></div>`;
+      return `<div class="${className} normal" aria-hidden="true">${m.name.slice(0,2)}</div>`;
+    }
+    function card(m) {
+      return `<article class="card"><button class="card-main" type="button" data-name="${m.name}" aria-label="查看 ${m.name} 属性详情">${artFor(m, 'thumb')}<div class="card-copy"><div class="name-row"><span class="name">${m.name}</span></div><span class="choice good"><span class="icon">${iconFor(m.good)}</span>优先：${m.good}</span></div></button></article>`;
+    }
+    function showSheet(m) {
+      sheet.innerHTML = `<button class="sheet-close" type="button" aria-label="关闭详情">×</button><div class="sheet-grid">${artFor(m, 'sheet-art')}<div><h2 class="sheet-name">${m.name}</h2><p class="sheet-detail">${m.detail}</p><p class="sheet-choice good">${iconFor(m.good)} 优先：${m.good}</p><p class="sheet-choice bad">⊘ 避开：${m.bad}</p></div></div>`;
+      sheet.hidden = false;
+      sheet.querySelector('.sheet-close').addEventListener('click', () => { sheet.hidden = true; });
+    }
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const shown = monsters.filter(m => (filter === 'all' || m.tags.includes(filter)) && `${m.name} ${m.aliases || ''} ${m.good} ${m.bad}`.toLowerCase().includes(q));
+      const labels = {'已遇待核':'已遇怪物（属性待核）'};
+      results.innerHTML = ['首领 BOSS','常见怪物','特殊精英','已遇待核'].map(group => {
+        const items = shown.filter(m => m.group === group); return items.length ? `<h2 class="section">${labels[group] || group}</h2><div class="cards">${items.map(card).join('')}</div>` : '';
+      }).join('');
+      empty.style.display = shown.length ? 'none' : 'block';
+      results.querySelectorAll('.card-main').forEach(button => button.addEventListener('click', () => { showSheet(monsters.find(m => m.name === button.dataset.name)); }));
+    }
+    document.querySelectorAll('.filter').forEach(button => button.addEventListener('click', () => { filter = button.dataset.filter; document.querySelectorAll('.filter').forEach(x => x.setAttribute('aria-pressed', x === button)); render(); }));
+    search.addEventListener('input', render); render();
+  </script>
+</body>
+</html>
